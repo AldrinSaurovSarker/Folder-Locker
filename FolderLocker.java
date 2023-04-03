@@ -14,8 +14,7 @@ public class FolderLocker {
     static String INSTALLATION_PATH;
     static String FOLDER_PATH;
     static String FILE_NAME;
-    static String KEY_PATH;
-    private final folderHidingHandler handler;
+    private final securityHandler handler;
 
     JFrame frame = new JFrame();
     JLabel labelNewPassword = new JLabel("New Password      ");
@@ -38,13 +37,11 @@ public class FolderLocker {
             int height,
             String installPath,
             String folderDirectory,
-            String passwordFileName,
-            String keyPath) {
+            String passwordFileName) {
         INSTALLATION_PATH = installPath;
         FOLDER_PATH = folderDirectory;
         FILE_NAME = passwordFileName;
-        KEY_PATH = keyPath;
-        this.handler = new folderHidingHandler(folderDirectory, keyPath);
+        this.handler = new securityHandler(folderDirectory);
         frame.setTitle(title);
         frame.setLayout(new GridLayout(5, 1));
         frame.setSize(width, height);
@@ -62,7 +59,7 @@ public class FolderLocker {
         return null;
     }
 
-    public static void storePassword(String password) {
+    public static void storePassword(String password, String key) {
         try {
             File file = new File(INSTALLATION_PATH, FILE_NAME);
             if (!file.exists()) {
@@ -78,7 +75,7 @@ public class FolderLocker {
                 String[] data = line.split("@");
                 if (data[0].equals(FOLDER_PATH)) {
                     directoryFound = true;
-                    line = FOLDER_PATH + "@" + encrypt(password);
+                    line = FOLDER_PATH + "@" + encrypt(password) + "@" + key;
                 }
                 sb.append(line);
 
@@ -87,7 +84,7 @@ public class FolderLocker {
             }
 
             if (!directoryFound) {
-                line = FOLDER_PATH + "@" + encrypt(password);
+                line = FOLDER_PATH + "@" + encrypt(password) + "@" + key;
                 sb.append(line).append("\n");
             }
 
@@ -127,7 +124,7 @@ public class FolderLocker {
         System.exit(0);
     }
 
-    public static String extractPassword() {
+    public static String[] extractPassword() {
         try {
             File file = new File(INSTALLATION_PATH, FILE_NAME);
             try (Scanner Reader = new Scanner(file)) {
@@ -135,7 +132,9 @@ public class FolderLocker {
                     String[] data = Reader.nextLine().split("@");
 
                     if (FOLDER_PATH.equals(data[0])) {
-                        return data[1];
+                        return new String[] {
+                                data[1], data[2]
+                        };
                     }
                 }
             }
@@ -272,10 +271,10 @@ public class FolderLocker {
                 responseMessage.setText("All Fields Must Be Filled");
                 passFieldConfirm.setBorder(BorderFactory.createLineBorder(Color.RED));
             } else if (val1.equals(val2)) {
-                FolderLocker.storePassword(val1);
-                responseMessage.setText("Password Stored Successfully");
                 SecretKey secretKey = handler.generateKey();
-                handler.encrypt(secretKey);;
+                handler.encrypt(secretKey);
+                FolderLocker.storePassword(val1, handler.keyToString(secretKey));
+                responseMessage.setText("Password Stored Successfully");
                 System.exit(0);
             } else {
                 responseMessage.setText("Password Doesn't Match");
@@ -283,9 +282,12 @@ public class FolderLocker {
         });
 
         unlockButton.addActionListener((e) -> {
-            if (Objects.equals(FolderLocker.extractPassword(), encrypt(String.valueOf(passFieldEnter.getPassword())))) {
+            String[] passwordData = extractPassword();
+
+            assert passwordData != null;
+            if (Objects.equals(passwordData[0], encrypt(String.valueOf(passFieldEnter.getPassword())))) {
                 responseMessage.setText("Password Matched");
-                SecretKey secretKey = handler.extractKey();
+                SecretKey secretKey = handler.extractKey(passwordData[1]);
                 handler.decrypt(secretKey);
                 openFolder(FOLDER_PATH);
                 System.exit(0);
