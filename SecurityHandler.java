@@ -5,10 +5,10 @@ import java.nio.file.*;
 import java.security.*;
 import java.util.*;
 
-public class securityHandler {
+public class SecurityHandler {
     private final String folderPath;
 
-    public securityHandler(String folderPath) {
+    public SecurityHandler(String folderPath) {
         this.folderPath = folderPath;
     }
 
@@ -19,7 +19,6 @@ public class securityHandler {
 
             for (File file : files) {
                 if (file.isFile() && file.getName().endsWith(".enc")) {
-                    // Decrypt the file using AES decryption
                     Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
                     cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
 
@@ -34,9 +33,8 @@ public class securityHandler {
                     FileOutputStream outputStream = new FileOutputStream(outputFile);
                     outputStream.write(outputBytes);
 
-                    if (!file.delete()) {
-                        System.out.println("Failed to delete file: " + file.getAbsolutePath());
-                    }
+                    inputStream.close();
+                    outputStream.close();
                 }
             }
         } catch (Exception e) {
@@ -51,7 +49,6 @@ public class securityHandler {
 
             for (File file : files) {
                 if (file.isFile()) {
-                    // Encrypt the file using AES encryption
                     Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
                     cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
 
@@ -65,6 +62,8 @@ public class securityHandler {
                     File outputFile = new File(outputFilePath);
                     FileOutputStream outputStream = new FileOutputStream(outputFile);
                     outputStream.write(outputBytes);
+                    inputStream.close();
+                    outputStream.close();
 
                     if (!file.delete()) {
                         System.out.println("Failed to delete file: " + file.getAbsolutePath());

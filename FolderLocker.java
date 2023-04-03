@@ -14,7 +14,7 @@ public class FolderLocker {
     static String INSTALLATION_PATH;
     static String FOLDER_PATH;
     static String FILE_NAME;
-    private final securityHandler handler;
+    private final SecurityHandler handler;
 
     JFrame frame = new JFrame();
     JLabel labelNewPassword = new JLabel("New Password      ");
@@ -41,7 +41,7 @@ public class FolderLocker {
         INSTALLATION_PATH = installPath;
         FOLDER_PATH = folderDirectory;
         FILE_NAME = passwordFileName;
-        this.handler = new securityHandler(folderDirectory);
+        this.handler = new SecurityHandler(folderDirectory);
         frame.setTitle(title);
         frame.setLayout(new GridLayout(5, 1));
         frame.setSize(width, height);
@@ -49,7 +49,7 @@ public class FolderLocker {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
-    public static String encrypt(String password) {
+    public String encrypt(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(password.getBytes(), 0, password.length());
@@ -59,7 +59,7 @@ public class FolderLocker {
         return null;
     }
 
-    public static void storePassword(String password, String key) {
+    public void storePassword(String password, String key) {
         try {
             File file = new File(INSTALLATION_PATH, FILE_NAME);
             if (!file.exists()) {
@@ -96,9 +96,9 @@ public class FolderLocker {
         }
     }
 
-    public static void removePassword() throws IOException {
-        File file = new File(INSTALLATION_PATH, FILE_NAME);
-        FileReader fileReader = new FileReader(file);
+    public void removePassword() throws IOException {
+        File passwordFile = new File(INSTALLATION_PATH, FILE_NAME);
+        FileReader fileReader = new FileReader(passwordFile);
         BufferedReader bufferedReader = new BufferedReader(fileReader);
         StringBuffer stringBuffer = new StringBuffer();
         String line;
@@ -106,12 +106,21 @@ public class FolderLocker {
         while ((line = bufferedReader.readLine()) != null) {
             String[] data = line.split("@");
             if (data[0].equals(FOLDER_PATH)) {
-                System.out.println("OK");
                 line = "";
                 break;
             }
             stringBuffer.append(line);
             stringBuffer.append("\n");
+        }
+
+        handler.decrypt(handler.extractKey(extractPassword()[1]));
+
+        for (File file : Objects.requireNonNull(new File(FOLDER_PATH).listFiles((dir, name) -> name.endsWith(".enc")))) {
+            if (!file.delete()) {
+                System.out.println("Failed to delete " + file.getAbsolutePath());
+            } else {
+                System.out.println("Files deleted successfully.");
+            }
         }
 
         bufferedReader.close();
@@ -124,7 +133,7 @@ public class FolderLocker {
         System.exit(0);
     }
 
-    public static String[] extractPassword() {
+    public String[] extractPassword() {
         try {
             File file = new File(INSTALLATION_PATH, FILE_NAME);
             try (Scanner Reader = new Scanner(file)) {
@@ -243,7 +252,7 @@ public class FolderLocker {
         passFieldEnter.getDocument().addDocumentListener(documentListener);
     }
 
-    private static void openFolder(String folderPath) {
+    private void openFolder(String folderPath) {
         try {
             Process p = Runtime.getRuntime().exec(new String[] {"explorer.exe", "/root,", folderPath});
             p.waitFor();
@@ -273,7 +282,7 @@ public class FolderLocker {
             } else if (val1.equals(val2)) {
                 SecretKey secretKey = handler.generateKey();
                 handler.encrypt(secretKey);
-                FolderLocker.storePassword(val1, handler.keyToString(secretKey));
+                this.storePassword(val1, handler.keyToString(secretKey));
                 responseMessage.setText("Password Stored Successfully");
                 System.exit(0);
             } else {
