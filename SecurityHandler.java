@@ -67,8 +67,6 @@ public class SecurityHandler {
 
                     if (!file.delete()) {
                         System.out.println("Failed to delete file: " + file.getAbsolutePath());
-                    } else {
-                        System.out.println("Files deleted successfully");
                     }
 
                     Path encryptedFilePath = outputFile.toPath();
